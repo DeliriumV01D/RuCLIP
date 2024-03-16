@@ -2,6 +2,7 @@
 
 #include "json.hpp"
 #include <filesystem>
+#include <fstream>
 
 #include "TorchHeader.h"
 

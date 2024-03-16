@@ -6,7 +6,7 @@
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <filesystem>
-
+#include <fstream>
 
 inline torch::Tensor CVMatToTorchTensor(const cv::Mat img, const bool perm = true)
 {
@@ -25,7 +25,7 @@ inline cv::Mat TorchTensorToCVMat(const torch::Tensor tensor_image, const bool p
 		t = t.permute({ 1, 2, 0 });
 	t = t.mul(255).clamp(0, 255).to(torch::kU8);
 	cv::Mat result_img;
-	cv::Mat(t.size(0), t.size(1), CV_MAKETYPE(CV_8U, t.sizes().size() >= 3 ? t.size(2) : 1), t.data_ptr()).copyTo(result_img);
+	cv::Mat(static_cast<int>(t.size(0)), static_cast<int>(t.size(1)), CV_MAKETYPE(CV_8U, t.sizes().size() >= 3 ? static_cast<int>(t.size(2)) : 1), t.data_ptr()).copyTo(result_img);
 	return result_img;
 }
 

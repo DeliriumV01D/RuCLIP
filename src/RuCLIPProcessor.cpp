@@ -46,7 +46,7 @@ torch::Tensor RuCLIPProcessor :: PrepareTokens(/*std::vector<*/std::vector<int32
 		tokens.resize(TextSeqLength);
 		tokens.back() = back;
 	}
-	int empty_positions = TextSeqLength - tokens.size();
+	int empty_positions = TextSeqLength - static_cast<int>(tokens.size());
 	if (empty_positions > 0)
 		result = torch::cat({ torch::tensor(tokens, torch::kLong), torch::zeros(empty_positions, torch::kLong) });  //position tokens after text
 	return result;

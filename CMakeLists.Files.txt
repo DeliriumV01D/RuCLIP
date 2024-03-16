@@ -13,7 +13,7 @@ link_directories(
 set(SOURCES ${SOURCES}
 	src/RuCLIP.cpp
 	src/RuCLIPProcessor.cpp
-	src/RuCLIPPredictor.cpp
+	#src/RuCLIPPredictor.cpp
 	src/youtokentome/utf8.cpp
 	src/youtokentome/utils.cpp
 	src/youtokentome/bpe.cpp
@@ -29,7 +29,7 @@ set(HEADERS ${HEADERS}
 	src/youtokentome/utils.h
 	src/youtokentome/bpe.h
 	src/RuCLIPProcessor.h
-	src/RuCLIPPredictor.h
+	#src/RuCLIPPredictor.h
 )
 
 set(LIBS ${LIBS}

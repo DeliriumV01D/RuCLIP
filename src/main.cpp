@@ -9,6 +9,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/opencv.hpp>
 
 #include "RuCLIP.h"
 #include "RuCLIPProcessor.h"
@@ -16,7 +17,25 @@
 int main(int argc, const char* argv[])
 {
 	setlocale(LC_ALL, "");
-	const int INPUT_IMG_SIZE = 336;
+
+	const char* keys =
+	{
+		"{ imgs             |img1.jpg,img2.jpg   | List of jpegs | }"
+		"{ text             |cat,bear,fox        | List of words | }"
+		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to ruClip model | }"
+		"{ bpe              |../data/ruclip-vit-large-patch14-336/bpe.model | Play a video to this position (if 0 then played to the end of file) | }"
+		"{ img_size         |336                 | Input model size | }"
+	};
+	
+	cv::CommandLineParser parser(argc, argv, keys);
+	parser.printMessage();
+
+	std::string imagesStr = parser.get<std::string>("imgs");
+	std::string labelsStr = parser.get<std::string>("text");
+	std::string pathToClip = parser.get<std::string>("clip");
+	std::string pathToBPE = parser.get<std::string>("bpe");
+	int INPUT_IMG_SIZE = parser.get<int>("img_size");
+
 	torch::manual_seed(24);
 
 	torch::Device device(torch::kCPU);
@@ -28,33 +47,52 @@ int main(int argc, const char* argv[])
 		std::cout << "CUDA is not available! Running on CPU." << std::endl;
 	}
 
-	CLIP clip = FromPretrained("..//data//ruclip-vit-large-patch14-336");
+	std::cout << "Load clip from: " << pathToClip << std::endl;
+	CLIP clip = FromPretrained(pathToClip);
 	clip->to(device);
 
+	std::cout << "Load processor from: " << pathToBPE << std::endl;
 	RuCLIPProcessor processor(
-		"..//data//ruclip-vit-large-patch14-336//bpe.model",
+		pathToBPE,
 		INPUT_IMG_SIZE,
 		77,
 		{ 0.48145466, 0.4578275, 0.40821073 },
 		{ 0.26862954, 0.26130258, 0.27577711 }
 	);
 
-		////Или можно без него сначала попробовать
-		//RuCLIPPredictor(clip, processor, device, templates, 8);
+	std::vector<cv::Mat> images;
+	{
+		std::cout << "images: " << std::endl;
+		std::regex sep("[,]+");
+		std::sregex_token_iterator tokens(imagesStr.cbegin(), imagesStr.cend(), sep, -1);
+		std::sregex_token_iterator end;
+		for (; tokens != end; ++tokens)
+		{
+			cv::Mat img = cv::imread(*tokens, cv::IMREAD_COLOR);
 
-	//Загрузить картинки
-	std::vector <cv::Mat> images;
-	images.push_back(cv::imread("..//data//test_images//1.png", cv::ImreadModes::IMREAD_COLOR));
-	images.push_back(cv::imread("..//data//test_images//2.jpg", cv::ImreadModes::IMREAD_COLOR));
-	images.push_back(cv::imread("..//data//test_images//3.jpg", cv::ImreadModes::IMREAD_COLOR));
-	//resize->[336, 336]
-	for (auto &it : images)
-		 cv::resize(it, it, cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE));
+			std::cout << (*tokens) << " is loaded: " << !img.empty() << std::endl;
+
+			cv::resize(img, img, cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE), cv::INTER_CUBIC);
+			images.emplace_back(img);
+		}
+	}
 
 	//Завести метки
 	std::vector<std::string> labels;
-	labels = {"кот", "медведь", "лиса"};
+	{
+		std::cout << "labels: ";
+		std::regex sep("[,]+");
+		std::sregex_token_iterator tokens(labelsStr.cbegin(), labelsStr.cend(), sep, -1);
+		std::sregex_token_iterator end;
+		for (; tokens != end; ++tokens)
+		{
+			std::cout << (*tokens) << " | ";
+			labels.emplace_back(*tokens);
+		}
+		std::cout << std::endl;
+	}
 
+	std::cout << "Running..." << std::endl;
 	auto dummy_input = processor(labels, images);
 	try {
 		torch::Tensor logits_per_image = clip->forward(dummy_input.first.to(device), dummy_input.second.to(device));
@@ -64,4 +102,5 @@ int main(int argc, const char* argv[])
 	}	catch (std::exception& e) {
 		std::cout << e.what() << std::endl;
 	}
+	std::cout << "The end!" << std::endl;
 }

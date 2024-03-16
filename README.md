@@ -5,19 +5,21 @@ RuCLIP (Russian Contrastive Language–Image Pretraining) is a multimodal model 
 Original PyTorch code: https://github.com/ai-forever/ru-clip
 Original CLIP OpenAI paper: https://arxiv.org/pdf/2103.00020.pdf
 
-Dependencies: 
+#### Dependencies: 
 libTorch(https://pytorch.org), 
 YouTokenToMe tokenizer https://github.com/VKCOM/YouTokenToMe, 
 OpenCV(https://opencv.org/releases/), 
 nlohmann json(https://github.com/nlohmann/json) 
 
-test images:
+#### Test
+
+Test images:
 
 ![1](https://github.com/DeliriumV01D/RuCLIP/assets/46240032/2a006f77-30c8-45a7-b2c5-928899f2db8a)
 ![2](https://github.com/DeliriumV01D/RuCLIP/assets/46240032/2cd7364c-6368-4658-a2cb-c3350e8abfa7)
 ![3](https://github.com/DeliriumV01D/RuCLIP/assets/46240032/aea25ee6-a9a6-4fd8-b435-dc8a4c17b009)
 
-test labels:
+Test labels:
 {"кот", "медведь", "лиса"}
 
 RuCLIP probabilities:
@@ -65,3 +67,26 @@ For minimal example see main.cpp:
   traced_script_module = torch.jit.trace(model, var)
   
   traced_script_module.save("gdrive/My Drive/ruclip-vit-large-patch14-336.zip")
+
+#### Run a defaul example
+
+On Windows with CMake build can be some problems:
+1. nvToolsExt not found with CUDA 12.1. You can set include directory "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include/nvtx3" and any library
+2. After CMake generate step remove from linker dependency nvToolsExt library - they are not used in project and nvToolsExt64_1.dll has alredy in libTorch
+
+
+**Run example with bat file:**
+
+            set IMGS=C:\work\clip\ruclip_\CLIP\data\test_images\1.png,C:\work\clip\ruclip_\CLIP\data\test_images\2.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\3.jpg
+            set LABELS=cat,bear,fox
+
+            set CLIP=C:\work\clip\ruclip_\CLIP\data\ruclip-vit-large-patch14-336
+            set BPE=C:\work\clip\ruclip_\CLIP\data\ruclip-vit-large-patch14-336\bpe.model
+            set SIZE=336
+
+            RuCLIP.exe --imgs=%IMGS% --text=%LABELS% --clip=%CLIP% --bpe=%BPE% --img_size=%SIZE%
+
+
+
+
+

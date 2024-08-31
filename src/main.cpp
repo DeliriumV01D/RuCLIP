@@ -5,6 +5,7 @@
 #include <iostream>
 #include <filesystem>
 #include <string>
+#include <regex>
 
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
@@ -20,10 +21,10 @@ int main(int argc, const char* argv[])
 
 	const char* keys =
 	{
-		"{ imgs             |img1.jpg,img2.jpg   | List of jpegs | }"
-		"{ text             |cat,bear,fox        | List of words | }"
-		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to ruClip model | }"
-		"{ bpe              |../data/ruclip-vit-large-patch14-336/bpe.model | Play a video to this position (if 0 then played to the end of file) | }"
+		"{ imgs             |img1.jpg,img2.jpg   | List of images | }"
+		"{ text             |cat,bear,fox        | List of labels | }"
+		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to RuClip model | }"
+		"{ bpe              |../data/ruclip-vit-large-patch14-336/bpe.model | Path to tokenizer | }"
 		"{ img_size         |336                 | Input model size | }"
 	};
 	
@@ -73,6 +74,7 @@ int main(int argc, const char* argv[])
 			std::cout << (*tokens) << " is loaded: " << !img.empty() << std::endl;
 
 			cv::resize(img, img, cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE), cv::INTER_CUBIC);
+
 			images.emplace_back(img);
 		}
 	}
@@ -87,7 +89,7 @@ int main(int argc, const char* argv[])
 		for (; tokens != end; ++tokens)
 		{
 			std::cout << (*tokens) << " | ";
-			labels.emplace_back(*tokens);
+			labels.push_back(*tokens);
 		}
 		std::cout << std::endl;
 	}
@@ -99,7 +101,7 @@ int main(int argc, const char* argv[])
 		torch::Tensor logits_per_text = logits_per_image.t();
 		auto probs = logits_per_image.softmax(/*dim = */-1).detach().cpu();
 		std::cout << "probs per image: " << probs << std::endl;
-	}	catch (std::exception& e) {
+	}	catch (std::exception &e) {
 		std::cout << e.what() << std::endl;
 	}
 	std::cout << "The end!" << std::endl;

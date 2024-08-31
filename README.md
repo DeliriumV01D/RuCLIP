@@ -68,7 +68,7 @@ For minimal example see main.cpp:
   
   traced_script_module.save("gdrive/My Drive/ruclip-vit-large-patch14-336.zip")
 
-#### Run a defaul example
+#### Run a default example
 
 On Windows with CMake build can be some problems:
 1. nvToolsExt not found with CUDA 12.1. You can set include directory "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.1/include/nvtx3" and any library

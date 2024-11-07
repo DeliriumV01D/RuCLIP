@@ -34,7 +34,7 @@ RuCLIPProcessor :: RuCLIPProcessor(
 }
 
 ///!!!Локали-юникоды
-torch::Tensor RuCLIPProcessor :: EncodeText(/*std::vector<*/std::string &text)
+torch::Tensor RuCLIPProcessor :: EncodeText(const/*std::vector<*/std::string &text)
 {
 	std::vector<std::vector<int32_t>> ret_ids;
 	vkcom::Status status;

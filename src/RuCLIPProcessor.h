@@ -51,7 +51,7 @@ public:
 	);
 
 	///!!!Локали-юникоды
-	torch::Tensor EncodeText(/*std::vector<*/std::string &text);
+	torch::Tensor EncodeText(const /*std::vector<*/std::string &text);
 	torch::Tensor PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens);		//Передаю по значению чтобы внутри иметь дело с копией
 	std::pair <torch::Tensor, torch::Tensor> operator () (const std::vector <std::string> &texts, const std::vector <cv::Mat> &images);
 

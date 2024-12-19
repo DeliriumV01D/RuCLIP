@@ -58,6 +58,13 @@ torch::Tensor RuCLIPProcessor :: EncodeText(const/*std::vector<*/std::string &te
 	return PrepareTokens(it);
 }
 
+torch::Tensor RuCLIPProcessor::EncodeImage(const cv::Mat& img)
+{
+	torch::Tensor img_tensor = CVMatToTorchTensor(img, true);
+	img_tensor = torch::data::transforms::Normalize<>(NormMean, NormStd)(img_tensor);
+	return img_tensor;
+}
+
 torch::Tensor RuCLIPProcessor :: PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens)		//Передаю по значению чтобы внутри иметь дело с копией
 {
 	torch::Tensor result;

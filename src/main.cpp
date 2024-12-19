@@ -15,12 +15,90 @@
 #include "RuCLIP.h"
 #include "RuCLIPProcessor.h"
 
+///
+bool MatchImageAndText(torch::Device& device, CLIP& clip, RuCLIPProcessor& processor,
+	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels)
+{
+	bool res = false;
+
+	auto dummy_input = processor(labels, images);
+	try {
+		torch::Tensor logits_per_image = clip->forward(dummy_input.first.to(device), dummy_input.second.to(device));
+		torch::Tensor logits_per_text = logits_per_image.t();
+		auto probs = logits_per_image.softmax(/*dim = */-1).detach().cpu();
+		std::cout << "probs per image: " << probs << std::endl;
+		res = true;
+	}
+	catch (std::exception& e)
+	{
+		res = false;
+		std::cerr << e.what() << std::endl;
+	}
+	return res;
+}
+
+///
+bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& processor,
+	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels)
+{
+	bool res = false;
+
+	if (images.size() < 2)
+	{
+		std::cerr << "There must be at least 2 images: one for reference and others to search through" << std::endl;
+		return res;
+	}
+
+	try
+	{
+		std::cout << "Create tensor for reference..." << std::endl;
+		torch::Tensor embed = processor.EncodeImage(images[0]);
+		embed = embed / embed.norm(2/*L2*/, -1, true);
+
+		std::cout << "Create tensor for others..." << std::endl;
+		std::vector<torch::Tensor> imgsTensors;
+		imgsTensors.reserve(images.size() - 1);
+		for (size_t i = 1; i < images.size(); ++i)
+		{
+			imgsTensors.emplace_back(processor.EncodeImage(images[i]));
+		}
+		auto imgsFeatures = torch::stack(imgsTensors).to(device);
+		imgsFeatures = imgsFeatures / imgsFeatures.norm(2/*L2*/, -1, true);
+
+		std::cout << "Create tensor for text..." << std::endl;
+		std::vector<torch::Tensor> textTensors;
+		textTensors.reserve(labels.size());
+		for (auto label : labels)
+		{
+			textTensors.emplace_back(processor.EncodeText(label));
+		}
+		auto textFeatures = clip->EncodeText(torch::stack(textTensors).to(device));
+		//auto textFeatures = torch::stack(textTensors).to(device);
+		textFeatures = textFeatures / textFeatures.norm(2/*L2*/, -1, true);
+
+		std::cout << "Relevancy: one image to " << (images.size() - 1) << " with " << labels.size() << " negatives" << std::endl;
+		torch::Tensor probs = Relevancy(embed, imgsFeatures, textFeatures);
+		std::cout << "Probs for image2images: " << probs << std::endl;
+		res = true;
+	}
+	catch (std::exception& e)
+	{
+		res = false;
+		std::cerr << e.what() << std::endl;
+	}
+
+	return res;
+}
+
+
+///
 int main(int argc, const char* argv[])
 {
 	setlocale(LC_ALL, "");
 
 	const char* keys =
 	{
+		"{ test_ind         |                    | 0: matching images and text, 1: matching first image with all others (text - negative embeddings) | }"
 		"{ imgs             |img1.jpg,img2.jpg   | List of images | }"
 		"{ text             |cat,bear,fox        | List of labels | }"
 		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to RuClip model | }"
@@ -31,6 +109,7 @@ int main(int argc, const char* argv[])
 	cv::CommandLineParser parser(argc, argv, keys);
 	parser.printMessage();
 
+	int testInd = parser.get<int>("test_ind"); 
 	std::string imagesStr = parser.get<std::string>("imgs");
 	std::string labelsStr = parser.get<std::string>("text");
 	std::string pathToClip = parser.get<std::string>("clip");
@@ -95,14 +174,20 @@ int main(int argc, const char* argv[])
 	}
 
 	std::cout << "Running..." << std::endl;
-	auto dummy_input = processor(labels, images);
-	try {
-		torch::Tensor logits_per_image = clip->forward(dummy_input.first.to(device), dummy_input.second.to(device));
-		torch::Tensor logits_per_text = logits_per_image.t();
-		auto probs = logits_per_image.softmax(/*dim = */-1).detach().cpu();
-		std::cout << "probs per image: " << probs << std::endl;
-	}	catch (std::exception &e) {
-		std::cout << e.what() << std::endl;
+
+	switch (testInd)
+	{
+	case 0:
+		MatchImageAndText(device, clip, processor, images, labels);
+		break;
+
+	case 1:
+		MatchOne2ManyImages(device, clip, processor, images, labels);
+		break;
+
+	default:
+		std::cerr << "Wrong test index: " << testInd << std::endl;
 	}
+	
 	std::cout << "The end!" << std::endl;
 }

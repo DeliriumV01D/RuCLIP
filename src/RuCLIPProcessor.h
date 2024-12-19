@@ -53,6 +53,7 @@ public:
 	///!!!Локали-юникоды
 	torch::Tensor EncodeText(const /*std::vector<*/std::string &text);
 	torch::Tensor PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens);		//Передаю по значению чтобы внутри иметь дело с копией
+	torch::Tensor EncodeImage(const cv::Mat& img);
 	std::pair <torch::Tensor, torch::Tensor> operator () (const std::vector <std::string> &texts, const std::vector <cv::Mat> &images);
 
 	static RuCLIPProcessor FromPretrained(const std::filesystem::path &folder)
@@ -91,14 +92,23 @@ public:
 ///float lv = rel.index({0,0}).item<float>();
 inline torch::Tensor Relevancy(torch::Tensor embeds, torch::Tensor positives, torch::Tensor negatives)
 {
+	std::cout << "0" << std::endl;
 	auto embeds2 = torch::cat({positives, negatives});
+	std::cout << "1" << std::endl;
 	auto logits = /*scale * */torch::mm(embeds, embeds2.t());  //[batch_size x phrases]
+	std::cout << "2" << std::endl; 
 	auto positive_vals = logits.index({"...", torch::indexing::Slice(0, 1)});  // [batch_size x 1]
+	std::cout << "3" << std::endl;
 	auto negative_vals = logits.index({"...", torch::indexing::Slice(1, torch::indexing::None)});		// [batch_size x negative_phrase_n]
+	std::cout << "4" << std::endl;
 	auto repeated_pos = positive_vals.repeat({1, negatives.sizes()[0]});  //[batch_size x negative_phrase_n]
+	std::cout << "5" << std::endl;
 	auto sims = torch::stack({repeated_pos, negative_vals}, -1);   //[batch_size x negative_phrase_n x 2]
+	std::cout << "6" << std::endl;
 	auto smx = torch::softmax(10 * sims, -1);                      // [batch_size x negative_phrase_n x 2]
+	std::cout << "7" << std::endl;
 	auto best_id = smx.index({"...", 0}).argmin(1);                // [batch_size x 2]
+	std::cout << "8" << std::endl;
 	auto result = torch::gather(smx, 1, best_id.index({"...", torch::indexing::None, torch::indexing::None}).expand({best_id.sizes()[0], negatives.sizes()[0], 2})
 		).index({torch::indexing::Slice(), 0, torch::indexing::Slice()});// [batch_size x 2]
 	return result;

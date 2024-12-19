@@ -75,7 +75,7 @@ On Windows with CMake build can be some problems:
 2. After CMake generate step remove from linker dependency nvToolsExt library - they are not used in project and nvToolsExt64_1.dll has alredy in libTorch
 
 
-**Run example with bat file:**
+**Run example matching images to text with bat file:**
 
             set IMGS=C:\work\clip\ruclip_\CLIP\data\test_images\1.png,C:\work\clip\ruclip_\CLIP\data\test_images\2.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\3.jpg
             set LABELS=cat,bear,fox
@@ -84,7 +84,19 @@ On Windows with CMake build can be some problems:
             set BPE=C:\work\clip\ruclip_\CLIP\data\ruclip-vit-large-patch14-336\bpe.model
             set SIZE=336
 
-            RuCLIP.exe --imgs=%IMGS% --text=%LABELS% --clip=%CLIP% --bpe=%BPE% --img_size=%SIZE%
+            RuCLIP.exe --test_ind=0 --imgs=%IMGS% --text=%LABELS% --clip=%CLIP% --bpe=%BPE% --img_size=%SIZE%
+
+**Run example matching one image to another with bat file:**
+
+            set IMGS=C:\work\clip\ruclip_\CLIP\data\test_images\bag2_1.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\bag0_0.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\bag1_0.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\bag2_0.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\bag2_2.jpg,C:\work\clip\ruclip_\CLIP\data\test_images\bag5_2.jpg
+            set LABELS=person,car,truck,bus
+
+            set CLIP=C:\work\clip\ruclip_\CLIP\data\ruclip-vit-large-patch14-336
+            set BPE=C:\work\clip\ruclip_\CLIP\data\ruclip-vit-large-patch14-336\bpe.model
+            set SIZE=336
+
+            RuCLIP.exe --test_ind=1 --imgs=%IMGS% --text=%LABELS% --clip=%CLIP% --bpe=%BPE% --img_size=%SIZE%
+
 
 
 

@@ -30,7 +30,7 @@ RuCLIPProcessor :: RuCLIPProcessor(
 ) : ImageSize(image_size), TextSeqLength(text_seq_length), NormMean(norm_mean), NormStd(norm_std)
 {
 	vkcom::Status status;
-	Tokenizer = new vkcom::BaseEncoder(tokenizer_path.string(), -1, &status);
+	Tokenizer = std::make_unique<vkcom::BaseEncoder>(tokenizer_path.string(), -1, &status);
 }
 
 ///!!!Локали-юникоды

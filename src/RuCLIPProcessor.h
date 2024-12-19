@@ -40,7 +40,7 @@ protected:
 		TextSeqLength{ 77 };
 	std::vector<double> NormMean,
 		NormStd;
-	vkcom::BaseEncoder * Tokenizer;
+	std::unique_ptr<vkcom::BaseEncoder> Tokenizer;
 public:
 	RuCLIPProcessor(
 		const std::filesystem::path &tokenizer_path,

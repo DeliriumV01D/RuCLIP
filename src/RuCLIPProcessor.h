@@ -97,12 +97,12 @@ inline torch::Tensor Relevancy(torch::Tensor embeds, torch::Tensor positives, to
 	std::cout << "1" << std::endl;
 	auto logits = /*scale * */torch::mm(embeds, embeds2.t());  //[batch_size x phrases]
 	std::cout << "2" << std::endl; 
-	auto positive_vals = logits.index({"...", torch::indexing::Slice(0, 1)});  // [batch_size x 1]
+	auto positive_vals = logits.index({"...", torch::indexing::Slice(0, positives.sizes()[0])});  // [batch_size x 1]
 	std::cout << "3" << std::endl;
-	auto negative_vals = logits.index({"...", torch::indexing::Slice(1, torch::indexing::None)});		// [batch_size x negative_phrase_n]
+	auto negative_vals = logits.index({"...", torch::indexing::Slice(positives.sizes()[0], torch::indexing::None)});		// [batch_size x negative_phrase_n]
 	std::cout << "4" << std::endl;
 	auto repeated_pos = positive_vals.repeat({1, negatives.sizes()[0]});  //[batch_size x negative_phrase_n]
-	std::cout << "5" << std::endl;
+	std::cout << "5: repeated_pos: " << repeated_pos.sizes() << ", negative_vals: " << negative_vals.sizes() << std::endl;
 	auto sims = torch::stack({repeated_pos, negative_vals}, -1);   //[batch_size x negative_phrase_n x 2]
 	std::cout << "6" << std::endl;
 	auto smx = torch::softmax(10 * sims, -1);                      // [batch_size x negative_phrase_n x 2]

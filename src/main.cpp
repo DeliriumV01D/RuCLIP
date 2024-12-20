@@ -26,7 +26,7 @@ bool MatchImageAndText(torch::Device& device, CLIP& clip, RuCLIPProcessor& proce
 		torch::Tensor logits_per_image = clip->forward(dummy_input.first.to(device), dummy_input.second.to(device));
 		torch::Tensor logits_per_text = logits_per_image.t();
 		auto probs = logits_per_image.softmax(/*dim = */-1).detach().cpu();
-		std::cout << "probs per image: " << probs << std::endl;
+		std::cout << "probs per image:\n" << probs << std::endl;
 		res = true;
 	}
 	catch (std::exception& e)
@@ -52,8 +52,9 @@ bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& pro
 	try
 	{
 		std::cout << "Create tensor for reference..." << std::endl;
-		torch::Tensor embed = processor.EncodeImage(images[0]);
+		torch::Tensor embed = clip->EncodeImage(processor.EncodeImage(images[0]).to(device));
 		embed = embed / embed.norm(2/*L2*/, -1, true);
+		std::cout << "embed: " << embed.sizes() << std::endl;
 
 		std::cout << "Create tensor for others..." << std::endl;
 		std::vector<torch::Tensor> imgsTensors;
@@ -61,9 +62,15 @@ bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& pro
 		for (size_t i = 1; i < images.size(); ++i)
 		{
 			imgsTensors.emplace_back(processor.EncodeImage(images[i]));
+			std::cout << "imgsTensors: " << imgsTensors.back().sizes() << std::endl;
 		}
-		auto imgsFeatures = torch::stack(imgsTensors).to(device);
+		auto toStack = torch::stack(imgsTensors);
+		std::cout << "toStack: " << toStack.sizes() << std::endl;
+		auto toSqueeze = toStack.squeeze(1);
+		std::cout << "toSqueeze: " << toSqueeze.sizes() << std::endl;
+		auto imgsFeatures = clip->EncodeImage(toSqueeze.to(device));
 		imgsFeatures = imgsFeatures / imgsFeatures.norm(2/*L2*/, -1, true);
+		std::cout << "imgsFeatures: " << imgsFeatures.sizes() << std::endl;
 
 		std::cout << "Create tensor for text..." << std::endl;
 		std::vector<torch::Tensor> textTensors;
@@ -73,12 +80,13 @@ bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& pro
 			textTensors.emplace_back(processor.EncodeText(label));
 		}
 		auto textFeatures = clip->EncodeText(torch::stack(textTensors).to(device));
-		//auto textFeatures = torch::stack(textTensors).to(device);
 		textFeatures = textFeatures / textFeatures.norm(2/*L2*/, -1, true);
+
+		std::cout << "embed: " << embed.sizes() << ", imgsFeatures: " << imgsFeatures.sizes() << ", textFeatures: " << textFeatures.sizes() << std::endl;
 
 		std::cout << "Relevancy: one image to " << (images.size() - 1) << " with " << labels.size() << " negatives" << std::endl;
 		torch::Tensor probs = Relevancy(embed, imgsFeatures, textFeatures);
-		std::cout << "Probs for image2images: " << probs << std::endl;
+		std::cout << "Probs for image2images:\n" << probs << std::endl;
 		res = true;
 	}
 	catch (std::exception& e)
@@ -150,8 +158,8 @@ int main(int argc, const char* argv[])
 		{
 			cv::Mat img = cv::imread(*tokens, cv::IMREAD_COLOR);
 
-			std::cout << (*tokens) << " is loaded: " << !img.empty() << std::endl;
-
+			std::cout << (*tokens) << " is loaded: " << !img.empty() << " with size " << img.size() << std::endl;
+			std::cout << "Resizing to " << cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE) << "..." << std::endl;
 			cv::resize(img, img, cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE), cv::INTER_CUBIC);
 
 			images.emplace_back(img);

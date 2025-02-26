@@ -25,9 +25,10 @@ Test labels:
 {"кот", "медведь", "лиса"}
 
 RuCLIP probabilities:
- 0.8879  0.0063  0.1058
- 0.0014  0.0026  0.9960
- 0.0002  0.9994  0.0003
+
+	0.8879  0.0063  0.1058
+	0.0014  0.0026  0.9960
+	0.0002  0.9994  0.0003
 
 For minimal example see main.cpp:
 
@@ -74,35 +75,33 @@ For minimal example see main.cpp:
 	import matplotlib.pyplot as plt
 
 	def save_clip_model(clip_name:str, size:int, device:str):
-    	clip, processor = ruclip.load(clip_name, device=device)
+		clip, processor = ruclip.load(clip_name, device=device)
 
+		# prepare images
+		bs4_urls = requests.get('https://raw.githubusercontent.com/ai-forever/ru-dolph/master/pics/pipelines/cats_vs_dogs_bs4.json').json()
+		images = [Image.open(BytesIO(base64.b64decode(bs4_url))) for bs4_url in bs4_urls]
 
-    	# prepare images
-    	bs4_urls = requests.get('https://raw.githubusercontent.com/ai-forever/ru-dolph/master/pics/pipelines/cats_vs_dogs_bs4.json').json()
-    	images = [Image.open(BytesIO(base64.b64decode(bs4_url))) for bs4_url in bs4_urls]
+		# prepare classes
+		classes = ['кошка', 'собака']
+		templates = ['{}', 'это {}', 'на картинке {}', 'это {}, домашнее животное']
 
-    	# prepare classes
-    	classes = ['кошка', 'собака']
-    	templates = ['{}', 'это {}', 'на картинке {}', 'это {}, домашнее животное']
+		# predict
+		predictor = ruclip.Predictor(clip, processor, device, bs=8, templates=templates)
+		with torch.no_grad():
+			text_latents = predictor.get_text_latents(classes)
+			pred_labels = predictor.run(images, text_latents)
 
-    	# predict
-    	predictor = ruclip.Predictor(clip, processor, device, bs=8, templates=templates)
-    	with torch.no_grad():
-        	text_latents = predictor.get_text_latents(classes)
-        	print("text_latents: ", text_latents.size())
-        	print("text_latents: ", text_latents)
-        	pred_labels = predictor.run(images, text_latents)
+		# show results
+		f, ax = plt.subplots(2,4, figsize=(12,6))
+		for i, (pil_img, pred_label) in enumerate(zip(images, pred_labels)):
+			ax[i//4, i%4].imshow(pil_img)
+			ax[i//4, i%4].set_title(classes[pred_label])
+		plt.show()
 
-    	# show results
-    	f, ax = plt.subplots(2,4, figsize=(12,6))
-    	for i, (pil_img, pred_label) in enumerate(zip(images, pred_labels)):
-        	ax[i//4, i%4].imshow(pil_img)
-        	ax[i//4, i%4].set_title(classes[pred_label])
-    	plt.show()
-    
-    	var=(torch.ones((1, 77)).long(), torch.ones((1, 3, size, size)))  
-    	traced_script_module = torch.jit.trace(clip, var)
-    	traced_script_module.save("saves/" + clip_name + ".zip")
+    		# export to jit
+		var=(torch.ones((1, 77)).long(), torch.ones((1, 3, size, size)))  
+		traced_script_module = torch.jit.trace(clip, var)
+		traced_script_module.save("saves/" + clip_name + ".zip")
 
 	#device = 'cuda'
 	device = 'cpu'

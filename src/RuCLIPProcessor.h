@@ -8,53 +8,24 @@
 #include <filesystem>
 #include <fstream>
 
-
-
-
-//template <typename T>
-//std::basic_string<T> lowercase(const std::basic_string<T>& s)
-//{
-//	std::basic_string<T> s2 = s;
-//	std::transform(s2.begin(), s2.end(), s2.begin(),
-//		[](const T v) { return static_cast<T>(std::tolower(v)); });
-//	return s2;
-//}
-//
-//template <typename T>
-//std::basic_string<T> uppercase(const std::basic_string<T>& s)
-//{
-//	std::basic_string<T> s2 = s;
-//	std::transform(s2.begin(), s2.end(), s2.begin(),
-//		[](const T v) { return static_cast<T>(std::toupper(v)); });
-//	return s2;
-//}
-
 ///
 class RuCLIPProcessor
 {
-private:
-	uint32_t eos_id = 3;
-	uint32_t bos_id = 2;
-	uint32_t unk_id = 1;
-	uint32_t pad_id = 0;
-	const int ImageSize{ 224 };
-	const int TextSeqLength{ 77 };
-	std::vector<double> NormMean;
-	std::vector<double> NormStd;
-	std::unique_ptr<vkcom::BaseEncoder> Tokenizer;
-
 public:
-	RuCLIPProcessor(const std::filesystem::path &tokenizer_path,
-		            const int image_size = 224,
-		            const int text_seq_length = 77,
-		            const std::vector<double> norm_mean = { 0.48145466, 0.4578275, 0.40821073 },
-		            const std::vector<double> norm_std = { 0.26862954, 0.26130258, 0.27577711 });
+	RuCLIPProcessor(const std::string& tokenizer_path,
+		const int image_size = 224,
+		const int text_seq_length = 77,
+		const std::vector<double> norm_mean = { 0.48145466, 0.4578275, 0.40821073 },
+		const std::vector<double> norm_std = { 0.26862954, 0.26130258, 0.27577711 });
 
 	///!!!Локали-юникоды
 	torch::Tensor EncodeText(const /*std::vector<*/std::string &text);
 	torch::Tensor PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens);		//Передаю по значению чтобы внутри иметь дело с копией
 	torch::Tensor EncodeImage(const cv::Mat& img);
-	std::pair <torch::Tensor, torch::Tensor> operator () (const std::vector <std::string> &texts, const std::vector <cv::Mat> &images);
+	std::pair <torch::Tensor, torch::Tensor> operator()(const std::vector <std::string>& texts, const std::vector <cv::Mat>& images);
+	std::pair <torch::Tensor, torch::Tensor> operator()(const std::vector <cv::Mat>& images);
+
+	void CacheText(const std::vector <std::string>& texts);
 
 	///
 	int GetImageSize() const noexcept
@@ -74,12 +45,25 @@ public:
 		auto mean = config["mean"].template get<std::vector<double>>();
 		auto std = config["std"].template get<std::vector<double>>();
 
-		return RuCLIPProcessor(tokenizer_path,
+		return RuCLIPProcessor(tokenizer_path.string(),
                                int(config["image_resolution"]),
                                int(config["context_length"]),
                                mean,
                                std);
 	}
+
+private:
+	uint32_t eos_id = 3;
+	uint32_t bos_id = 2;
+	uint32_t unk_id = 1;
+	uint32_t pad_id = 0;
+	const int ImageSize{ 224 };
+	const int TextSeqLength{ 77 };
+	std::vector<double> NormMean;
+	std::vector<double> NormStd;
+	std::unique_ptr<vkcom::BaseEncoder> Tokenizer;
+
+	std::vector<torch::Tensor> m_textsTensors;
 };
 
 ///relevancy for batch size == 1 at this moment,   float lv = result.index({0,0}).item<float>();

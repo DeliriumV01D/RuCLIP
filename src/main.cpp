@@ -3,13 +3,9 @@
 #include <cmath>
 #include <cstdio>
 #include <iostream>
-#include <filesystem>
 #include <string>
 #include <regex>
 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgproc/types_c.h>
-#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
 #include "RuCLIP.h"
@@ -110,8 +106,6 @@ int main(int argc, const char* argv[])
 		"{ imgs             |img1.jpg,img2.jpg   | List of images | }"
 		"{ text             |cat,bear,fox        | List of labels | }"
 		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to RuClip model | }"
-		"{ bpe              |../data/ruclip-vit-large-patch14-336/bpe.model | Path to tokenizer | }"
-		"{ img_size         |336                 | Input model size | }"
 	};
 	
 	cv::CommandLineParser parser(argc, argv, keys);
@@ -121,8 +115,7 @@ int main(int argc, const char* argv[])
 	std::string imagesStr = parser.get<std::string>("imgs");
 	std::string labelsStr = parser.get<std::string>("text");
 	std::string pathToClip = parser.get<std::string>("clip");
-	std::string pathToBPE = parser.get<std::string>("bpe");
-	int INPUT_IMG_SIZE = parser.get<int>("img_size");
+
 
 	torch::manual_seed(24);
 
@@ -136,17 +129,10 @@ int main(int argc, const char* argv[])
 	}
 
 	std::cout << "Load clip from: " << pathToClip << std::endl;
-	CLIP clip = FromPretrained(pathToClip);
+	CLIP clip{ FromPretrained(pathToClip) };
 	clip->to(device);
 
-	std::cout << "Load processor from: " << pathToBPE << std::endl;
-	RuCLIPProcessor processor(
-		pathToBPE,
-		INPUT_IMG_SIZE,
-		77,
-		{ 0.48145466, 0.4578275, 0.40821073 },
-		{ 0.26862954, 0.26130258, 0.27577711 }
-	);
+	RuCLIPProcessor processor{ RuCLIPProcessor::FromPretrained(pathToClip) };
 
 	std::vector<cv::Mat> images;
 	{
@@ -159,8 +145,8 @@ int main(int argc, const char* argv[])
 			cv::Mat img = cv::imread(*tokens, cv::IMREAD_COLOR);
 
 			std::cout << (*tokens) << " is loaded: " << !img.empty() << " with size " << img.size() << std::endl;
-			std::cout << "Resizing to " << cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE) << "..." << std::endl;
-			cv::resize(img, img, cv::Size(INPUT_IMG_SIZE, INPUT_IMG_SIZE), cv::INTER_CUBIC);
+			std::cout << "Resizing to " << cv::Size(processor.GetImageSize(), processor.GetImageSize()) << "..." << std::endl;
+			cv::resize(img, img, cv::Size(processor.GetImageSize(), processor.GetImageSize()), cv::INTER_CUBIC);
 
 			images.emplace_back(img);
 		}

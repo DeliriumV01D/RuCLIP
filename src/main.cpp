@@ -212,11 +212,9 @@ int main(int argc, const char* argv[])
 		for (; tokens != end; ++tokens)
 		{
 			cv::Mat img = cv::imread(*tokens, cv::IMREAD_COLOR);
-
+			const cv::Size inputSize(processor.GetImageSize(), processor.GetImageSize());
 			std::cout << (*tokens) << " is loaded: " << !img.empty() << " with size " << img.size() << std::endl;
-			std::cout << "Resizing to " << cv::Size(processor.GetImageSize(), processor.GetImageSize()) << "..." << std::endl;
-			cv::resize(img, img, cv::Size(processor.GetImageSize(), processor.GetImageSize()), cv::INTER_CUBIC);
-
+			std::cout << "Resizing to " << inputSize << "..." << std::endl;
 			images.emplace_back(img);
 		}
 	}

@@ -41,11 +41,11 @@ public:
 	}
 
 	///!!!Локали-юникоды
-	torch::Tensor EncodeText(const /*std::vector<*/std::string &text);
-	torch::Tensor PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens);		//Передаю по значению чтобы внутри иметь дело с копией
-	torch::Tensor EncodeImage(const cv::Mat& img);
-	std::pair<torch::Tensor, torch::Tensor> operator()(const std::vector <std::string>& texts, const std::vector <cv::Mat>& images);
-	std::pair<torch::Tensor, torch::Tensor> operator()(const std::vector <cv::Mat>& images);
+	torch::Tensor EncodeText(const /*std::vector<*/std::string &text) const;
+	torch::Tensor PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens) const;	//Передаю по значению чтобы внутри иметь дело с копией
+	torch::Tensor EncodeImage(const cv::Mat& img) const;
+	std::pair<torch::Tensor, torch::Tensor> operator()(const std::vector <std::string>& texts, const std::vector <cv::Mat>& images) const;
+	std::pair<torch::Tensor, torch::Tensor> operator()(const std::vector <cv::Mat>& images) const;
 
 	void CacheText(const std::vector <std::string>& texts);
 
@@ -87,6 +87,9 @@ private:
 	std::unique_ptr<vkcom::BaseEncoder> Tokenizer;
 
 	std::vector<torch::Tensor> m_textsTensors;
+
+	///
+	cv::Mat ResizeToInput(const cv::Mat& img, bool saveAspectRatio = true) const;
 };
 
 ///relevancy for batch size == 1 at this moment,   float lv = result.index({0,0}).item<float>();

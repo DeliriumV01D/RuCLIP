@@ -45,8 +45,7 @@ torch::Tensor RuCLIPProcessor :: EncodeText(const/*std::vector<*/std::string &te
 	////	it = lowercase(it);
 	//text = lowercase(text);
 	//output_type = vkcom::OutputType::ID, bos = false, eos = false, reverse = false, dropout_prob = 0.0
-	std::vector <std::string> texts;
-	texts.push_back(text);
+	std::vector <std::string> texts{ text };
 	status = Tokenizer->encode_as_ids(texts, &ret_ids);
 	if (status.code != 0)
 		throw std::runtime_error("RuCLIPProcessor::EncodeText error : " + status.message);
@@ -61,6 +60,7 @@ torch::Tensor RuCLIPProcessor :: EncodeText(const/*std::vector<*/std::string &te
 	return PrepareTokens(it);
 }
 
+///
 torch::Tensor RuCLIPProcessor::EncodeImage(const cv::Mat& img)
 {
 	torch::Tensor img_tensor = CVMatToTorchTensor(img, true);
@@ -68,6 +68,7 @@ torch::Tensor RuCLIPProcessor::EncodeImage(const cv::Mat& img)
 	return img_tensor;
 }
 
+///
 torch::Tensor RuCLIPProcessor :: PrepareTokens(/*std::vector<*/std::vector<int32_t> tokens)		//Передаю по значению чтобы внутри иметь дело с копией
 {
 	torch::Tensor result;
@@ -93,6 +94,12 @@ void RuCLIPProcessor::CacheText(const std::vector <std::string>& texts)
 		torch::Tensor text_tensor = EncodeText(s);
 		m_textsTensors.push_back(text_tensor);
 	}
+}
+
+///
+const std::vector<torch::Tensor>& RuCLIPProcessor::GetTextTensors() const
+{
+	return m_textsTensors;
 }
 
 ///

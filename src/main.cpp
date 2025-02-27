@@ -13,7 +13,8 @@
 
 ///
 bool MatchImageAndText(torch::Device& device, CLIP& clip, RuCLIPProcessor& processor,
-	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels)
+	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels,
+	bool showResult)
 {
 	bool res = false;
 
@@ -23,6 +24,41 @@ bool MatchImageAndText(torch::Device& device, CLIP& clip, RuCLIPProcessor& proce
 		torch::Tensor logits_per_text = logits_per_image.t();
 		auto probs = logits_per_image.softmax(/*dim = */-1).detach().cpu();
 		std::cout << "probs per image:\n" << probs << std::endl;
+		
+		if (showResult)
+		{
+			for (size_t row = 0; row < images.size(); ++row)
+			{
+				std::string wndName = std::to_string(row);
+
+				float maxProb = 0.f;
+				size_t maxCol = 0;
+				for (size_t col = 0; col < labels.size(); ++col)
+				{
+					float value = probs[row][col].item<float>();
+					if (maxProb < value)
+					{
+						maxProb = value;
+						maxCol = col;
+					}
+				}
+				std::string label = labels[maxCol] + ": " + std::to_string(maxProb);
+
+				int baseLine = 0;
+				double fontScale = (images[row].cols < 1920) ? 0.7 : 2.0;
+				int thickness = (images[row].cols < 1920) ? 1 : 2;
+				int lineType = cv::LINE_AA;
+				int fontFace = cv::FONT_HERSHEY_SCRIPT_COMPLEX;
+				cv::Size labelSize = cv::getTextSize(label, fontFace, fontScale, thickness, &baseLine);
+				cv::putText(images[row], label, cv::Point(2, 2 + labelSize.height), fontFace, fontScale, cv::Scalar(255, 0, 255), thickness, lineType);
+
+
+				cv::imshow(wndName, images[row]);
+				cv::waitKey(1);
+			}
+			cv::waitKey(0);
+		}
+		
 		res = true;
 	}
 	catch (std::exception& e)
@@ -35,7 +71,8 @@ bool MatchImageAndText(torch::Device& device, CLIP& clip, RuCLIPProcessor& proce
 
 ///
 bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& processor,
-	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels)
+	const std::vector<cv::Mat>& images, const std::vector<std::string>& labels,
+	bool showResult)
 {
 	bool res = false;
 
@@ -83,6 +120,37 @@ bool MatchOne2ManyImages(torch::Device& device, CLIP& clip, RuCLIPProcessor& pro
 		std::cout << "Relevancy: one image to " << (images.size() - 1) << " with " << labels.size() << " negatives" << std::endl;
 		torch::Tensor probs = Relevancy(embed, imgsFeatures, textFeatures);
 		std::cout << "Probs for image2images:\n" << probs << std::endl;
+		
+		
+		if (showResult)
+		{
+			size_t row = 0;
+			cv::imshow("source", images[row]);
+			cv::waitKey(1);
+
+			std::string wndName = std::to_string(row);
+
+			for (size_t col = 1; col < images.size(); ++col)
+			{
+				float prob = probs[row][col - 1].item<float>();
+				std::string label = std::to_string(col) + ": " + std::to_string(prob);
+
+				int baseLine = 0;
+				double fontScale = (images[col].cols < 1920) ? 0.7 : 2.0;
+				int thickness = (images[col].cols < 1920) ? 1 : 2;
+				int lineType = cv::LINE_AA;
+				int fontFace = cv::FONT_HERSHEY_SCRIPT_COMPLEX;
+				cv::Size labelSize = cv::getTextSize(label, fontFace, fontScale, thickness, &baseLine);
+				cv::putText(images[col], label, cv::Point(2, 2 + labelSize.height), fontFace, fontScale, cv::Scalar(255, 0, 255), thickness, lineType);
+
+				cv::imshow(wndName, images[col]);
+				cv::waitKey(1);
+			}
+
+			cv::waitKey(0);
+		}
+		
+		
 		res = true;
 	}
 	catch (std::exception& e)
@@ -102,10 +170,11 @@ int main(int argc, const char* argv[])
 
 	const char* keys =
 	{
-		"{ test_ind         |                    | 0: matching images and text, 1: matching first image with all others (text - negative embeddings) | }"
+		"{ test_ind         |0                   | 0: matching images and text, 1: matching first image with all others (text - negative embeddings) | }"
 		"{ imgs             |img1.jpg,img2.jpg   | List of images | }"
 		"{ text             |cat,bear,fox        | List of labels | }"
 		"{ clip             |../data/ruclip-vit-large-patch14-336 | Path to RuClip model | }"
+		"{ show             |1                   | Show result | }"
 	};
 	
 	cv::CommandLineParser parser(argc, argv, keys);
@@ -115,7 +184,7 @@ int main(int argc, const char* argv[])
 	std::string imagesStr = parser.get<std::string>("imgs");
 	std::string labelsStr = parser.get<std::string>("text");
 	std::string pathToClip = parser.get<std::string>("clip");
-
+	bool showResult = parser.get<int>("show") != 0;
 
 	torch::manual_seed(24);
 
@@ -124,7 +193,7 @@ int main(int argc, const char* argv[])
 	{
 		std::cout << "CUDA is available! Running on GPU." << std::endl;
 		device = torch::Device(torch::kCUDA);
-	}	else {
+	} else {
 		std::cout << "CUDA is not available! Running on CPU." << std::endl;
 	}
 
@@ -172,11 +241,11 @@ int main(int argc, const char* argv[])
 	switch (testInd)
 	{
 	case 0:
-		MatchImageAndText(device, clip, processor, images, labels);
+		MatchImageAndText(device, clip, processor, images, labels, showResult);
 		break;
 
 	case 1:
-		MatchOne2ManyImages(device, clip, processor, images, labels);
+		MatchOne2ManyImages(device, clip, processor, images, labels, showResult);
 		break;
 
 	default:

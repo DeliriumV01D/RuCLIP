@@ -1,7 +1,9 @@
 #include "RuCLIPProcessor.h"
 
-inline torch::Tensor CVMatToTorchTensor(const cv::Mat img, const bool perm = true)
+inline torch::Tensor CVMatToTorchTensor(cv::Mat img, const bool perm = true)
 {
+	if (!img.isContinuous())
+		img = img.clone();
 	auto tensor_image = torch::from_blob(img.data, { img.rows, img.cols, img.channels() }, at::kByte);
 	if (perm)
 		tensor_image = tensor_image.permute({ 2,0,1 });
